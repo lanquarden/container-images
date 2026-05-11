@@ -30,7 +30,7 @@ jobs:
       - name: Extract upstream tag from Dockerfile
         id: tag
         run: |
-          TAG=$(grep '^FROM ghcr.io/openclaw/openclaw:' openclaw/Dockerfile | cut -d: -f2 | cut -d@ -f1)
+          TAG=$(sed -n 's/^ARG OPENCLAW_VERSION=\(.*\)/\1/p' openclaw/Dockerfile)
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
