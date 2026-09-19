@@ -2,7 +2,7 @@ name: openclaw
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "openclaw/**"
   workflow_dispatch:
