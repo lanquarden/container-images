@@ -1,0 +1,34 @@
+# Pinned training dependencies — docs/manolo-wake-word-plan.md §3.2.
+# Python 3.10 only. Do not unpin without re-reading §1.4 (the pipeline is
+# bit-rotted on 3.12+ and the pins are load-bearing).
+torch==1.13.1
+# Matches torch 1.13.1; importable by piper-sample-generator's generate_samples.
+torchaudio==0.13.1
+torchinfo==1.8.0
+torchmetrics==1.2.0
+speechbrain==0.5.14
+audiomentations==0.33.0
+torch-audiomentations==0.11.0
+acoustics==0.2.6
+tensorflow-cpu==2.8.1
+tensorflow_probability==0.16.0
+onnx_tf==1.10.0
+pronouncing==0.2.0
+datasets==2.14.6
+deep-phonemizer==0.0.19
+pyarrow<15.0.0
+fsspec<2024.1.0
+webrtcvad
+numpy<2
+scipy
+tqdm
+pyyaml
+requests
+huggingface_hub
+# Imported by piper-sample-generator's generate_samples.py (openWakeWord's
+# train.py imports that module unconditionally). cp310 manylinux wheel exists.
+piper-phonemize==1.1.0
+# Spanish synthesis for the clip generator (route 1, plan §1.7).
+piper-tts
+# Offline evaluation of a produced .tflite (plan §5.1).
+pyopen-wakeword
