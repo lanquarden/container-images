@@ -13,6 +13,14 @@ acoustics==0.2.6
 tensorflow-cpu==2.8.1
 tensorflow_probability==0.16.0
 onnx_tf==1.10.0
+# tensorflow-cpu 2.8.1 needs protobuf<4, but onnx>=1.13 requires protobuf>=3.20,
+# and onnx-tf pulls the latest tensorflow-addons (which wants a newer TF). Pin
+# the trio that keeps `import tensorflow`/`onnx_tf.backend` working; verified on
+# beast 2026-09-24. Without these, TF 2.8.1 dies with "Descriptors cannot be
+# created directly" at the --convert_to_tflite step.
+protobuf==3.19.6
+onnx==1.12.0
+tensorflow-addons==0.16.1
 pronouncing==0.2.0
 datasets==2.14.6
 deep-phonemizer==0.0.19
