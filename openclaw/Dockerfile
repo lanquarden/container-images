@@ -6,6 +6,10 @@ LABEL org.opencontainers.image.source=https://github.com/lanquarden/container-im
 
 USER root
 
+# The Podman client packages (podman / podman-compose / podman-docker) let the
+# build node drive the host's rootless podman socket (Docker-outside-of-Docker)
+# instead of only editing files. See hosts/beast/openclaw-node/README.md in
+# lanquarden/home-ops for the socket mount and the accepted trade-off.
 RUN \
   /usr/bin/apt-get -y update && \
   /usr/bin/apt-get -y install --no-install-recommends \
@@ -15,6 +19,9 @@ RUN \
     jq \
     less \
     openssh-client \
+    podman \
+    podman-compose \
+    podman-docker \
     python3 \
     vim-tiny && \
   /usr/bin/install -d -m 0755 /etc/apt/keyrings /etc/apt/sources.list.d && \
