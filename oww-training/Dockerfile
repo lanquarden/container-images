@@ -18,7 +18,7 @@ LABEL org.opencontainers.image.title="openWakeWord training env"
 #     piper-sample-generator `generate_samples` module (imported unconditionally).
 #   - piper-sample-generator: a commit that still exposes generate_samples.py at
 #     its repository root (v2.x; v3.x reorganised the package).
-ARG OWW_COMMIT=main
+ARG OWW_COMMIT=368c03716d1e92591906a84949bc477f3a834455
 ARG PSG_COMMIT=v2.0.0
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -42,8 +42,14 @@ RUN git clone https://github.com/dscripka/openWakeWord /opt/openWakeWord \
     && git -C /opt/openWakeWord checkout "${OWW_COMMIT}" \
     && pip install -e /opt/openWakeWord \
     && git clone https://github.com/rhasspy/piper-sample-generator /opt/piper-sample-generator \
-    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}" \
-    && pip install -e /opt/piper-sample-generator
+    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}"
+
+# piper-sample-generator v2.0.0 ships no setup.py/pyproject.toml, so it is not
+# pip-installable. openWakeWord's train.py only needs its root-level
+# generate_samples.py importable (it does `sys.path.insert(0,
+# piper_sample_generator_path)` then `from generate_samples import
+# generate_samples`); PYTHONPATH below provides that. The module's runtime deps
+# (torchaudio, piper-phonemize) are pinned in requirements.txt instead.
 
 ENV PYTHONPATH=/opt/piper-sample-generator:/opt/openWakeWord
 
