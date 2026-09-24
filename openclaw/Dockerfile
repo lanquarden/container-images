@@ -1,6 +1,6 @@
-ARG OPENCLAW_VERSION=2026.9.5
+ARG OPENCLAW_VERSION=2026.9.6
 
-FROM ghcr.io/openclaw/openclaw:${OPENCLAW_VERSION}@sha256:ea298b62be8955d3ef750e2004a610dd90c3a30e5f9886e5d654d78a0c573218
+FROM ghcr.io/openclaw/openclaw:${OPENCLAW_VERSION}@sha256:0a5ff5e682e62afa19149df126aa50063bf65ef885b5c94713ce32dc0eb12e15
 
 LABEL org.opencontainers.image.source=https://github.com/lanquarden/container-images
 
