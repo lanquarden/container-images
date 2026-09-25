@@ -33,16 +33,22 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip \
-    && pip install -r /tmp/requirements.txt
 
+# One pip resolution for everything. A *separate*, later `pip install -e
+# /opt/openWakeWord` re-resolves on its own and pulls numpy 2.x (scipy 1.15
+# allows numpy<2.5 and nothing else pins it), which then breaks
+# tensorflow / pyarrow / openwakeword imports compiled against numpy 1.x.
+# Installing requirements + openWakeWord together keeps the `numpy<2` pin in
+# force for the whole graph.
+#
 # openWakeWord (importable as `openwakeword`) + piper-sample-generator (must be
 # importable at /opt/piper-sample-generator for train.py's root import).
-RUN git clone https://github.com/dscripka/openWakeWord /opt/openWakeWord \
+RUN pip install --upgrade pip \
+    && git clone https://github.com/dscripka/openWakeWord /opt/openWakeWord \
     && git -C /opt/openWakeWord checkout "${OWW_COMMIT}" \
-    && pip install -e /opt/openWakeWord \
     && git clone https://github.com/rhasspy/piper-sample-generator /opt/piper-sample-generator \
-    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}"
+    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}" \
+    && pip install -r /tmp/requirements.txt -e /opt/openWakeWord
 
 # piper-sample-generator v2.0.0 ships no setup.py/pyproject.toml, so it is not
 # pip-installable. openWakeWord's train.py only needs its root-level
