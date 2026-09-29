@@ -16,6 +16,7 @@ home and the host never builds from a Dockerfile.
 | `oww-training/` | `ghcr.io/lanquarden/oww-training:latest`, `:sha-<rev>` | linux/amd64 | `hosts/beast/oww-training/` (Spanish wake-word training) |
 | `crispasr/` | `ghcr.io/lanquarden/crispasr:<version>` | linux/amd64 | `hosts/beast/crispasr/` (Assist STT/TTS) |
 | `wakeword-capture/` | `ghcr.io/lanquarden/wakeword-capture:latest`, `:sha-<rev>` | linux/amd64, linux/arm64 | `hosts/smartdash/` (the kiosk satellite) |
+| `linux-voice-assistant/` | `ghcr.io/lanquarden/linux-voice-assistant:<version>`, `:sha-<rev>` | linux/amd64, linux/arm64 | `hosts/smartdash/` (the kiosk satellite, issue #356) |
 
 ## Tags
 
@@ -24,6 +25,9 @@ home and the host never builds from a Dockerfile.
   and merging to `master` publishes a new tag. Reference that tag from home-ops.
 - `oww-training` and `wakeword-capture` have no upstream version; they publish
   `latest` plus a `sha-<short>` tag for pinning a specific revision.
+- `linux-voice-assistant` builds a **fork** of the upstream project at a
+  pinned commit (issue #356); its tag lives in the workflow's `LVA_VERSION`
+  and it publishes `:<version>` plus `:sha-<short>`.
 
 ## Publishing
 
