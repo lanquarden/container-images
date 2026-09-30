@@ -43,4 +43,24 @@ RUN \
   chmod +x /usr/local/bin/kubectl && \
   /usr/bin/rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
+# `podman-docker` gives a `docker` CLI that maps to podman, but podman 4.x has
+# no built-in `compose` subcommand, and no standalone `docker-compose` is
+# installed. home-ops host runbooks call `docker compose -f ... up -d`, which
+# therefore fails with "unrecognized command `podman compose`". Provide a thin
+# shim ahead of /usr/bin/docker that routes `docker compose ...` to the
+# installed `podman-compose`, and a `docker-compose` symlink for the legacy
+# spelling. Everything else passes through to the podman-docker CLI.
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      '# docker -> podman shim; route the missing `compose` subcommand to podman-compose.' \
+      'if [ "$1" = "compose" ]; then' \
+      '  shift' \
+      '  exec podman-compose "$@"' \
+      'fi' \
+      'exec /usr/bin/docker "$@"' \
+      > /usr/local/bin/docker && \
+    chmod 0755 /usr/local/bin/docker && \
+    ln -sf /usr/bin/podman-compose /usr/local/bin/docker-compose && \
+    /usr/local/bin/docker compose version >/dev/null 2>&1 || true
+
 USER node
