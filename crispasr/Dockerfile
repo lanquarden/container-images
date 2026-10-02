@@ -10,7 +10,13 @@ FROM ubuntu:26.04
 LABEL org.opencontainers.image.source=https://github.com/lanquarden/container-images
 LABEL org.opencontainers.image.title="CrispASR ASR/TTS (Vulkan)"
 
-ARG CRISPASR_VERSION=0.8.34
+# Pinned to 0.8.40: it is the last upstream release that ships the
+# crispasr-linux-x86_64-vulkan.tar.gz artifact beast needs (RX 7900 XT via
+# RADV). v0.8.41 dropped every Linux GPU tarball except CUDA/HIP; its main
+# crispasr-linux-x86_64.tar.gz is a CPU-only AVX2 build (GGML_VULKAN=OFF).
+# Revisit only if a later release restores a Linux Vulkan asset or beast moves
+# to ROCm/HIP.
+ARG CRISPASR_VERSION=0.8.40
 
 # libvulkan1 + mesa-vulkan-drivers provide the RADV userspace driver; the
 # amdgpu kernel driver and /dev/dri come from the host.

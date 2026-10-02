@@ -2,12 +2,14 @@
 # Entrypoint for the CrispASR ASR/TTS service on `beast`.
 #
 # Everything is driven by environment variables so the same image can serve any
-# backend. Recommended pair (see ../README.md and docs/stt-tts-stack-research.md):
-#   ASR: qwen3-1.7b  (Qwen3-ASR 1.7B, Q8_0, ~6 GiB, RTF ~0.04, EN+ES)
-#   TTS: voxtral-tts (Voxtral-4B-TTS, Q8_0, ~4.7 GiB, RTF ~0.20)
+# backend. Deployed pair (see hosts/beast/crispasr/ in home-ops):
+#   ASR: qwen3-1.7b        (Qwen3-ASR 1.7B, Q8_0, ~6 GiB, RTF ~0.04, EN+ES)
+#   TTS: qwen3-tts-1.7b-base with a VoiceDesign-designed clone anchor
+#        (Q8_0 + F16 codec, ~2.5 GiB, RTF ~0.19; identity pinned by the
+#        jarvis.wav + jarvis.txt reference pair in the voice-dir)
 set -euo pipefail
 
-: "${BACKEND:?BACKEND is required, e.g. qwen3-1.7b or voxtral-tts}"
+: "${BACKEND:?BACKEND is required, e.g. qwen3-1.7b or qwen3-tts-customvoice}"
 MODEL="${MODEL:-auto}"
 MODEL_QUANT="${MODEL_QUANT:-q8_0}"
 HOST="${HOST:-0.0.0.0}"
@@ -52,6 +54,25 @@ fi
 # Home Assistant over Wyoming; the server still honours a per-request voice.
 if [ -n "${VOICE:-}" ]; then
   args+=(--voice "${VOICE}")
+fi
+
+# Fixed style/intonation direction (CustomVoice 1.7B style control, issue #91;
+# VoiceDesign voice description). Set once at server start: per-request
+# instruction changes trigger a model reload, and HA cannot send them anyway.
+# The 0.6B CustomVoice is not trained for style control — see
+# home-ops hosts/beast/crispasr/samples/0.8.40-instruct-styles/.
+if [ -n "${INSTRUCT:-}" ]; then
+  args+=(--instruct "${INSTRUCT}")
+fi
+
+# Voice library directory: <name>.wav reference clips with companion <name>.txt
+# transcripts, for the qwen3-tts-*-base voice-cloning backends (VOICE=jarvis
+# resolves to $VOICE_DIR/jarvis.wav + jarvis.txt). Also required for the server
+# to accept per-request 'voice' fields at all. See the home-ops voice-pinning
+# sample notes for why cloning pins speaker identity across utterance lengths
+# where VoiceDesign instruct-conditioning drifts.
+if [ -n "${VOICE_DIR:-}" ]; then
+  args+=(--voice-dir "${VOICE_DIR}")
 fi
 
 # Restricted-licence models (Voxtral TTS is CC-BY-NC-4.0) require explicit
