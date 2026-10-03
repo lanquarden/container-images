@@ -75,6 +75,15 @@ if [ -n "${VOICE_DIR:-}" ]; then
   args+=(--voice-dir "${VOICE_DIR}")
 fi
 
+# Voice-cloning consent: Wyoming-surface synthesis against a WAV-reference
+# anchor is REFUSED unless the operator asserts rights to the reference
+# material (--i-have-rights attests speaker consent; docs/cli.md). The
+# household anchor is our own VoiceDesign-generated take, so the deployment
+# sets this. HTTP-surface requests are unaffected.
+if [ "${I_HAVE_RIGHTS:-0}" = "1" ]; then
+  args+=(--i-have-rights)
+fi
+
 # Restricted-licence models (Voxtral TTS is CC-BY-NC-4.0) require explicit
 # acceptance before CrispASR will download them.
 if [ -n "${ACCEPT_LICENSE:-}" ]; then
