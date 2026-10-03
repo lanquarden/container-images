@@ -84,6 +84,14 @@ if [ "${I_HAVE_RIGHTS:-0}" = "1" ]; then
   args+=(--i-have-rights)
 fi
 
+# Speaker-identity declaration (real_person | synthetic). The house voice is a
+# VoiceDesign-generated persona, so the deployment declares it synthetic: that
+# silences the EU-AI-Act startup warning and the spoken disclosure that
+# cloning would otherwise prepend to every Wyoming announcement.
+if [ -n "${SPEAKER_IDENTITY:-}" ]; then
+  args+=(--speaker-identity "${SPEAKER_IDENTITY}")
+fi
+
 # Restricted-licence models (Voxtral TTS is CC-BY-NC-4.0) require explicit
 # acceptance before CrispASR will download them.
 if [ -n "${ACCEPT_LICENSE:-}" ]; then
