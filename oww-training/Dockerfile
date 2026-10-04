@@ -1,8 +1,15 @@
 # openWakeWord "Manolo" training environment — pinned, amd64-only, beast-side.
 #
-# Rationale for the pins: docs/manolo-wake-word-plan.md §3.2 and §1.4. The
-# upstream pipeline is bit-rotted on modern Python; Python 3.10 is the last
-# version for which every pinned wheel exists. Do NOT "upgrade to latest".
+# Rationale for the pins: docs/manolo-wake-word-plan.md §3.2 and §1.4, plus the
+# defects the first real run hit on 2026-10-04 and this revision fixes:
+#   - numpy resolved to 2.2.6 via openwakeword -> ai-edge-litert -> ml_dtypes
+#     0.6.0, which broke the pinned pyarrow. The pins in requirements.txt are
+#     installed AFTER openWakeWord so they win the resolution.
+#   - `mutagen` was missing, so `import openwakeword.train` failed.
+#   - the openWakeWord checkout ships no openwakeword/resources/models/, so
+#     AudioFeatures could not load melspectrogram.onnx / embedding_model.onnx.
+#   - upstream's ONNX->TFLite path (tensorflow-cpu 2.8.1 + onnx_tf 1.10) aborts
+#     on a protobuf ABI mismatch; replaced by onnx2tf.
 #
 # This image only ever runs on `beast` (or another amd64 Linux host). It is not
 # installed on the kiosk and is not part of the Talos cluster.
@@ -33,23 +40,35 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip \
-    && pip install -r /tmp/requirements.txt
 
 # openWakeWord (importable as `openwakeword`) + piper-sample-generator (must be
-# importable at /opt/piper-sample-generator for train.py's root import).
-RUN git clone https://github.com/dscripka/openWakeWord /opt/openWakeWord \
+# importable at /opt/piper-sample-generator for train.py's root import) first,
+# so their base dependencies resolve; then the pinned requirements on top, so
+# an unpinned transitive dependency (numpy via ml_dtypes) cannot win.
+RUN pip install --upgrade pip \
+    && git clone https://github.com/dscripka/openWakeWord /opt/openWakeWord \
     && git -C /opt/openWakeWord checkout "${OWW_COMMIT}" \
     && pip install -e /opt/openWakeWord \
     && git clone https://github.com/rhasspy/piper-sample-generator /opt/piper-sample-generator \
-    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}"
+    && git -C /opt/piper-sample-generator checkout "${PSG_COMMIT}" \
+    && pip install -r /tmp/requirements.txt
 
 # piper-sample-generator v2.0.0 ships no setup.py/pyproject.toml, so it is not
 # pip-installable. openWakeWord's train.py only needs its root-level
 # generate_samples.py importable (it does `sys.path.insert(0,
 # piper_sample_generator_path)` then `from generate_samples import
-# generate_samples`); PYTHONPATH below provides that. The module's runtime deps
-# (torchaudio, piper-phonemize) are pinned in requirements.txt instead.
+# generate_samples`); PYTHONPATH below provides that.
+
+# The GitHub checkout has no openwakeword/resources/models/, so AudioFeatures
+# cannot load melspectrogram.onnx / embedding_model.onnx and --augment_clips
+# dies with an onnxruntime NoSuchFile. Fetch the feature + VAD models at build
+# time (plus one wake-word model, which the downloader writes alongside them).
+RUN python3 -c "import openwakeword.utils as utils; utils.download_models(model_names=['hey_jarvis_v0.1'])"
+
+# ONNX -> TFLite: the kiosk's Linux Voice Assistant loads wake words through
+# pyopen_wakeword, which only accepts tflite, and upstream's converter is dead.
+COPY onnx2tflite /usr/local/bin/onnx2tflite
+RUN chmod +x /usr/local/bin/onnx2tflite
 
 ENV PYTHONPATH=/opt/piper-sample-generator:/opt/openWakeWord
 
