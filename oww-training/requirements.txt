@@ -31,9 +31,13 @@ mutagen==1.47.0
 onnx2tf
 
 pronouncing==0.2.0
-datasets==2.14.6
+# datasets 2.21 is the floor for streaming agkphysics/AudioSet as background
+# noise: 2.14.6 dies while casting the audio column with "must be called with a
+# dataclass type or instance". It requires pyarrow>=15. openWakeWord itself
+# does not import datasets, so this only affects the background fetcher.
+datasets==2.21.0
 deep-phonemizer==0.0.19
-pyarrow<15.0.0
+pyarrow>=15.0.0,<16.0.0
 fsspec<2024.1.0
 webrtcvad
 scipy
