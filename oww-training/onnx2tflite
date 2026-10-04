@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Convert an openWakeWord .onnx classifier to .tflite with onnx2tf.
+#
+# Why this exists: openWakeWord's own converter (tensorflow-cpu 2.8.1 +
+# onnx_tf 1.10) aborts the process with a protobuf ABI error, and the kiosk's
+# Linux Voice Assistant loads wake words through pyopen_wakeword, whose
+# OpenWakeWord only accepts a tflite model — an ONNX artifact is not
+# deployable. onnx2tf is the maintained replacement.
+#
+#   onnx2tflite <model.onnx> [model.tflite]
+#
+# Writes float32 tflite next to the input by default.
+set -euo pipefail
+
+if [ "$#" -lt 1 ]; then
+    echo "usage: onnx2tflite <model.onnx> [model.tflite]" >&2
+    exit 2
+fi
+
+onnx_path="$(realpath "$1")"
+if [ ! -f "$onnx_path" ]; then
+    echo "onnx2tflite: no such file: $onnx_path" >&2
+    exit 1
+fi
+out_path="${2:-${onnx_path%.onnx}.tflite}"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# onnx2tf's NCHW->NHWC heuristic reads the 16-frame axis of the openWakeWord
+# classifier input [1, 16, 96] as a channel axis and emits [1, 96, 16], which
+# does not match the layout the official models use (hey_jarvis_v0.1.tflite is
+# [1, 16, 96]). Rename the graph input to a stable ASCII name and pin its shape
+# with -kat so the conversion preserves [1, 16, 96].
+python3 - "$onnx_path" "$work/model.onnx" <<'PY'
+import sys
+
+import onnx
+
+src, dst = sys.argv[1], sys.argv[2]
+model = onnx.load(src)
+original = model.graph.input[0].name
+model.graph.input[0].name = "input"
+for node in model.graph.node:
+    for index, name in enumerate(node.input):
+        if name == original:
+            node.input[index] = "input"
+onnx.save(model, dst)
+PY
+
+onnx2tf -i "$work/model.onnx" -o "$work" -kat input >/dev/null
+
+float32="$(find "$work" -maxdepth 1 -name '*_float32.tflite' | head -n1)"
+if [ -z "$float32" ]; then
+    echo "onnx2tflite: onnx2tf produced no float32 tflite in $work" >&2
+    ls -la "$work" >&2
+    exit 1
+fi
+
+cp "$float32" "$out_path"
+
+# Fail loudly if the conversion changed the input layout.
+python3 - "$out_path" "$onnx_path" <<'PY'
+import sys
+
+import onnx
+import tensorflow as tf
+
+tflite_path, onnx_path = sys.argv[1], sys.argv[2]
+want = [
+    d.dim_value
+    for d in onnx.load(onnx_path).graph.input[0].type.tensor_type.shape.dim
+]
+interpreter = tf.lite.Interpreter(model_path=tflite_path)
+interpreter.allocate_tensors()
+got = interpreter.get_input_details()[0]["shape"].tolist()
+if got != want:
+    raise SystemExit(f"onnx2tflite: tflite input {got} != onnx input {want}")
+print(f"wrote {tflite_path} (input {got})")
+PY
